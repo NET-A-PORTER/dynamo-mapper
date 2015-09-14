@@ -1,10 +1,14 @@
 package com.github.cjwebb.dynamomapper
 
+import java.util.UUID
+
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
-import com.amazonaws.services.dynamodbv2.model.{AttributeValue, GetItemRequest, PutItemRequest}
+import com.amazonaws.services.dynamodbv2.model._
 import com.amazonaws.services.dynamodbv2.scala.AmazonDynamoDBClient
-import org.scalatest.FreeSpec
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{Seconds, Span}
+import org.scalatest.{Matchers, FreeSpec}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -12,59 +16,60 @@ import scala.concurrent.Await
 
 import Formats._
 
-class MainSpec extends FreeSpec {
+class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures {
 
-  "some stuff" - {
-    "happens" in {
-      val credentials = new BasicAWSCredentials("", "")
-      val asyncClient = {
-        val c = new AmazonDynamoDBAsyncClient(credentials)
-        c.setEndpoint("http://localhost:8000")
-        c
-      }
+  implicit val asyncConfig = PatienceConfig(timeout = scaled(Span(10, Seconds)))
 
-      implicit val dynamoFormat = Formats.writeFormat[Product]
+  def newId() = UUID.randomUUID().toString
+  val tableName = "table1"
 
-      val client = new AmazonDynamoDBClient(asyncClient)
+  def createTable(implicit client: AmazonDynamoDBClient) = {
+    val createTableRequest = {
+      val req = new CreateTableRequest(tableName, List(new KeySchemaElement("id", KeyType.HASH)).asJava)
+      req.setAttributeDefinitions(List(new AttributeDefinition("id", ScalarAttributeType.S)).asJava)
+      req.setProvisionedThroughput(new ProvisionedThroughput(5L, 5L))
+      req
+    }
+    Await.result(client.createTable(createTableRequest), 10 seconds)
+  }
 
-      //  val createTableRequest = {
-      //    val req = new CreateTableRequest("products", List(new KeySchemaElement("id", KeyType.HASH)).asJava)
-      //    req.setAttributeDefinitions(List(new AttributeDefinition("id", ScalarAttributeType.S)).asJava)
-      //    req.setProvisionedThroughput(new ProvisionedThroughput(5L, 5L))
-      //    req
-      //  }
-      //  Await.result(client.createTable(createTableRequest), 10 seconds)
+  implicit val client = {
+    val credentials = new BasicAWSCredentials("", "")
+    val c = new AmazonDynamoDBAsyncClient(credentials)
+    c.setEndpoint("http://localhost:8000")
+    new AmazonDynamoDBClient(c)
+  }
 
-      val putResult = client.putItem(new PutItemRequest("products", Formats.writes(Product("123", "red dress"))))
+  "writing objects" - {
 
-      //  val putResult = client.putItem(new PutItemRequest("products",
-      //    Map("id" -> new AttributeValue("123"),
-      //        "name" -> new AttributeValue("hello")).asJava))
+    "works with simple string case classes" in {
+      val id = newId()
+      client.putItem(new PutItemRequest(tableName, toDynamo(SimpleCaseClass(id, "simple")))).futureValue
 
-      Await.result(putResult, 10 seconds)
+      val result = client.getItem(new GetItemRequest(tableName, Map("id" -> new AttributeValue(id)).asJava)).futureValue
+      val expected = Map("name" -> new AttributeValue("simple"), "id" -> new AttributeValue(id)).asJava
 
-      val result = client.getItem(new GetItemRequest("products", Map("id" -> new AttributeValue("123")).asJava))
+      result.getItem shouldBe expected
+    }
 
-      val product = Await.result(result, 10 seconds)
+    "works with nested case classes" in {
+      val id = newId()
+      val nestedId = newId()
+      client.putItem(new PutItemRequest(tableName, toDynamo(NestedCaseClass(id, SimpleCaseClass(nestedId, "simple"))))).futureValue
 
-      println(product.getItem.asScala)
+      val result = client.getItem(new GetItemRequest(tableName, Map("id" -> new AttributeValue(id)).asJava)).futureValue
+      val expected = Map(
+        "id" -> new AttributeValue(id),
+        "simple" -> new AttributeValue().withM(Map(
+          "id" -> new AttributeValue(nestedId),
+          "name" -> new AttributeValue("simple")
+        ).asJava)
+      ).asJava
+      result.getItem shouldBe expected
 
       client.shutdown()
-
     }
+
+
   }
 }
-
-case class Product(id: String, name: String)
-
-object Product {
-  implicit val dynamoFormat = Formats.writeFormat[Product]
-}
-
-case class Colour(name: String)
-
-object Colour {
-  implicit val dynamoFormat = Formats.writeFormat[Colour]
-}
-
-
