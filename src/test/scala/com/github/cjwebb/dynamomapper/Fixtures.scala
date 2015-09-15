@@ -19,4 +19,12 @@ trait Fixtures {
     }
   }
 
+  case class ClassWithMap(id: String, map: Map[String, String])
+
+  object ClassWithMap {
+    implicit val writeFormat = new DynamoWrites[ClassWithMap] {
+      override def writes(c: ClassWithMap): DynamoValue = map("id" -> c.id, "map" -> c.map)
+    }
+  }
+
 }

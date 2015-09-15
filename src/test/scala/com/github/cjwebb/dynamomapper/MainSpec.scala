@@ -40,6 +40,14 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures {
     new AmazonDynamoDBClient(c)
   }
 
+  def putItem(dv: DynamoValue): PutItemResult = {
+    client.putItem(new PutItemRequest(tableName, toDynamo(dv))).futureValue
+  }
+
+  def getItem(id: String): GetItemResult = {
+    client.getItem(new GetItemRequest(tableName, Map("id" -> new AttributeValue(id)).asJava)).futureValue
+  }
+
   "writing objects" - {
 
     "works with simple string case classes" in {
@@ -67,9 +75,25 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures {
       ).asJava
       result.getItem shouldBe expected
 
-      client.shutdown()
     }
 
+    "works with maps" in {
+      val id = newId()
+      putItem(ClassWithMap(id, Map("hello" -> "world", "foo" -> "bar")))
+
+      val result = getItem(id)
+      val expected = Map(
+        "id" -> new AttributeValue(id),
+        "map" -> new AttributeValue().withM(Map(
+          "hello" -> new AttributeValue("world"),
+          "foo" -> new AttributeValue("bar")
+        ).asJava)
+      ).asJava
+
+      result.getItem shouldBe expected
+
+      client.shutdown()
+    }
 
   }
 }

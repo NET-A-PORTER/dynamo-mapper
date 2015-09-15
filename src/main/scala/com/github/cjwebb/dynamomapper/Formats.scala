@@ -47,7 +47,6 @@ object Formats extends DefaultDynamoWrites {
   def map(fields: (String, DynamoValueWrapper)*): DynamoMap =
     DynamoMap(fields.map(f => (f._1, f._2.asInstanceOf[DynamoValueWrapperImpl].field)))
 
-  // todo - fix this method - needs to compile-time check rather than throw exception
   def toDynamo(d: DynamoValue): DynamoData = {
     def convert(value: DynamoValue): AttributeValue = {
       value match {
@@ -67,7 +66,13 @@ trait DefaultDynamoWrites {
     override def writes(s: String): DynamoValue = DynamoString(s)
   }
 
-  implicit object MapWrites extends DynamoWrites[Map[String, DynamoValue]] {
-    override def writes(m: Map[String, DynamoValue]) = DynamoMap(m)
+//  implicit object MapWrites extends DynamoWrites[Map[String, DynamoValue]] {
+//    override def writes(m: Map[String, DynamoValue]) = DynamoMap(m)
+//  }
+
+  implicit def mapWritesT[T](implicit w: DynamoWrites[T]) = new DynamoWrites[Map[String, T]] {
+    override def writes(o: Map[String, T]): DynamoValue = {
+      DynamoMap(o.mapValues(v => w.writes(v)))
+    }
   }
 }
