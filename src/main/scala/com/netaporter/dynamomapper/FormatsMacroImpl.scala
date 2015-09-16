@@ -1,4 +1,4 @@
-package com.github.cjwebb.dynamomapper
+package com.netaporter.dynamomapper
 
 import scala.language.higherKinds
 import scala.reflect.macros._

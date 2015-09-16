@@ -1,6 +1,6 @@
-package com.github.cjwebb.dynamomapper
+package com.netaporter.dynamomapper
 
-import com.github.cjwebb.dynamomapper.DynamoMapper._
+import com.netaporter.dynamomapper.DynamoMapper._
 
 trait Fixtures {
   case class SimpleCaseClass(id: String, name: String)

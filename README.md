@@ -51,7 +51,7 @@ This automagically generates a standard `DynamoWrites` implementation.
 
 ## Work in Progress
 
-This library is a work in progress. As such, don't hold me responsible if it breaks your application in new and horrible ways. It is also very incomplete.
+This library is a work in progress. As such, don't hold us responsible if it breaks your application in new and horrible ways. It is also very incomplete.
 
 Only some Scala types (Map, String) are supported. Only some DynamoDB types are supported (Map, String).
 

@@ -1,7 +1,7 @@
-package com.github.cjwebb.dynamomapper
+package com.netaporter.dynamomapper
 
 import com.amazonaws.services.dynamodbv2.model._
-import com.github.cjwebb.dynamomapper.DynamoMapper._
+import com.netaporter.dynamomapper.DynamoMapper._
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Seconds, Span}

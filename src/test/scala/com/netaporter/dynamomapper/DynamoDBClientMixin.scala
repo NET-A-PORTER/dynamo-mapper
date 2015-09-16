@@ -1,4 +1,4 @@
-package com.github.cjwebb.dynamomapper
+package com.netaporter.dynamomapper
 
 import java.util.UUID
 
