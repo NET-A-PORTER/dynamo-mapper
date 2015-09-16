@@ -10,7 +10,9 @@ It isn't anywhere near finished. However, it may now be slightly useful. We can 
 ## Concepts
 
 ### DynamoValue
-This library contains a representation of [DynamoDB's DataTypes](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DataModel.html#DataModel.DataTypes). They all extend DynamoValue.
+This library contains a representation of [DynamoDB's DataTypes](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DataModel.html#DataModel.DataTypes). They all extend `DynamoValue`.
+
+They are basically wrappers around Scala types that can be easily converted into Dynamo types. For instance, `DynamoString` wraps `String`, and `DynamoMap` wraps `Map`.
 
 ### DynamoWrites[T]
 
@@ -31,7 +33,8 @@ Here is a worked example:
 
     // define DynamoWrites (as an implicit)
     implicit val writeFormat = new DynamoWrites[User] {
-      override def writes(c: ClassWithMap): DynamoValue = map("name" -> c.name, "email" -> c.name)
+      override def writes(u: User): DynamoValue =
+        map("name" -> u.name, "email" -> u.email)
     }
 
     // use the toDynamo method, and then use the Java SDK as normal
@@ -44,7 +47,7 @@ It is also possible to define the implicit `DynamoWrites[User]` like this:
 
     implicit val writeFormat = DynamoMapper.writeFormat[User]
 
-This uses automagically generates a standard `DynamoWrites` implementation. The macro is not configurable, so it is possible it generates something that doesn't match how you want to store the data.
+This automagically generates a standard `DynamoWrites` implementation. 
 
 ## Work in Progress
 
@@ -52,5 +55,5 @@ This library is a work in progress. As such, don't hold me responsible if it bre
 
 Only some Scala types (Map, String) are supported. Only some DynamoDB types are supported (Map, String).
 
-Praise, Pull Requests, and/or Constructive Criticism is very welcome.
+Praise, a Pull Request, and/or Constructive Criticism is very welcome.
 
