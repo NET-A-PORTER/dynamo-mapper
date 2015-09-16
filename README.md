@@ -1,7 +1,9 @@
 # dynamo-mapper
 An experiment in making the Java SDK DynamoDB Client more Scala-esque.
 
-    type DynamoData = java.util.Map[String, AttributeValue]
+```scala
+type DynamoData = java.util.Map[String, AttributeValue]
+```
 
 The Java SDK generally uses the type `java.util.Map[String, AttributeValue]` to send data to/from DynamoDB. This has been aliased to `DynamoData`. This library provides helpers to make converting between `DynamoData` and case classes easier.
 
@@ -26,26 +28,30 @@ This is a method to take any `DynamoValue` and convert it into `DynamoData`, whi
 
 Here is a worked example:
 
-    import DynamoMapper._
+```scala
+import DynamoMapper._
 
-    // define case class
-    case class User(name: String, email: String)
+// define case class
+case class User(name: String, email: String)
 
-    // define DynamoWrites (as an implicit)
-    implicit val writeFormat = new DynamoWrites[User] {
-      override def writes(u: User): DynamoValue =
-        map("name" -> u.name, "email" -> u.email)
-    }
+// define DynamoWrites (as an implicit)
+implicit val writeFormat = new DynamoWrites[User] {
+  override def writes(u: User): DynamoValue =
+    map("name" -> u.name, "email" -> u.email)
+}
 
-    // use the toDynamo method, and then use the Java SDK as normal
-    val dynamoData = toDynamo(User("Homer Simpson", "ChunkyLover53@aol.com"))
-    client.putItem(new PutItemRequest(tableName, dynamoData)
+// use the toDynamo method, and then use the Java SDK as normal
+val dynamoData = toDynamo(User("Homer Simpson", "ChunkyLover53@aol.com"))
+client.putItem(new PutItemRequest(tableName, dynamoData)
+```
 
 ### Macros
 
 It is also possible to define the implicit `DynamoWrites[User]` like this:
 
-    implicit val writeFormat = DynamoMapper.writeFormat[User]
+```scala
+implicit val writeFormat = DynamoMapper.writeFormat[User]
+```
 
 This automagically generates a standard `DynamoWrites` implementation. 
 
