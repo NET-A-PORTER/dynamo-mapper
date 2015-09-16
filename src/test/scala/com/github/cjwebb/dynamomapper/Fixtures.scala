@@ -1,30 +1,23 @@
 package com.github.cjwebb.dynamomapper
 
-import com.github.cjwebb.dynamomapper.Formats._
+import com.github.cjwebb.dynamomapper.DynamoMapper._
 
 trait Fixtures {
   case class SimpleCaseClass(id: String, name: String)
 
   object SimpleCaseClass {
-    implicit val writeFormat = new DynamoWrites[SimpleCaseClass] {
-      override def writes(c: SimpleCaseClass): DynamoValue = map("id" -> c.id, "name" -> c.name)
-    }
+    implicit val format = writeFormat[SimpleCaseClass]
   }
-
   case class NestedCaseClass(id: String, simple: SimpleCaseClass)
 
   object NestedCaseClass {
-    implicit val writeFormat = new DynamoWrites[NestedCaseClass] {
-      override def writes(c: NestedCaseClass): DynamoValue = map("id" -> c.id, "simple" -> c.simple)
-    }
+    implicit val format = writeFormat[NestedCaseClass]
   }
 
   case class ClassWithMap(id: String, map: Map[String, String])
 
   object ClassWithMap {
-    implicit val writeFormat = new DynamoWrites[ClassWithMap] {
-      override def writes(c: ClassWithMap): DynamoValue = map("id" -> c.id, "map" -> c.map)
-    }
+    implicit val format = writeFormat[ClassWithMap]
   }
 
 }

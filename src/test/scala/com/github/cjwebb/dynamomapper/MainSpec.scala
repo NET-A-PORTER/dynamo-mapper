@@ -14,7 +14,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.Await
 
-import Formats._
+import DynamoMapper._
 
 class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures {
 

@@ -4,10 +4,17 @@ version := "0.0.1"
 
 scalaVersion := "2.11.7"
 
-scalacOptions ++= Seq("-language:experimental.macros")
+scalacOptions ++=
+  "-language:experimental.macros" ::
+  "-language:implicitConversions" ::
+  "-language:postfixOps" ::
+  "-feature" ::
+  "-deprecation" ::
+  "-unchecked" ::
+  Nil
 
 libraryDependencies ++=
   "com.amazonaws.scala" % "aws-scala-sdk-dynamodb" % "1.10.7" ::
-  "com.typesafe.play" %% "play-json" % "2.4.3" ::
+  "org.scala-lang" % "scala-reflect" % scalaVersion.value ::
   "org.scalatest" %% "scalatest" % "2.2.4" % "test" ::
   Nil

@@ -1,7 +1,7 @@
 package com.github.cjwebb.dynamomapper
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
-import com.github.cjwebb.dynamomapper.Formats._
+import com.github.cjwebb.dynamomapper.DynamoMapper._
 
 import scala.collection.JavaConverters._
 import scala.annotation.implicitNotFound
@@ -15,25 +15,42 @@ case class DynamoString(s: String) extends DynamoValue
 case class DynamoMap(m: Map[String, DynamoValue]) extends DynamoValue
 // todo - add the rest of them
 
-object DynamoMap {
-  def apply(fields: Seq[(String, DynamoValue)]): DynamoMap = DynamoMap(fields.toMap)
+/**
+ * Base trait that needs to be implemented for any T that needs writing to DynamoDB.
+ * Typically, this is an implicit.
+ *
+ * @tparam T the type to write to DynamoDB
+ */
+@implicitNotFound("No DynamoWrites serializer found for type ${T}. Try to implement one.")
+trait DynamoWrites[T] {
+  def writes(o: T): DynamoValue
 }
 
-object Formats extends DefaultDynamoWrites {
-
+object DynamoMapper extends DefaultDynamoWrites {
   /**
    * The type expected by the Java SDK for most 'Item' operations
    */
   type DynamoData = java.util.Map[String, AttributeValue]
 
-  @implicitNotFound("No DynamoWrites serializer found for type ${T}. Try to implement one.")
-  trait DynamoWrites[T] {
-    def writes(o: T): DynamoValue
-  }
-
   implicit def writes[T](o: T)(implicit w: DynamoWrites[T]): DynamoValue = w.writes(o)
 
-  //def writeFormat[T] = macro FormatsMacroImpl.formatWriteImpl[T]
+  /**
+   * Creates a DynamoWrites[T] by resolving case class fields and values,
+   * and required implicits are compile-time.
+   *
+   * {{{
+   *   import DynamoMapper._
+   *
+   *   case class User(name: String, email: String)
+   *
+   *   implicit val userWrites = DynamoMapper.writeFormat[User]
+   *   // macro-compiler will expand this and is equivalent to:
+   *   implicit val userWrites = new DynamoWrites[User] {
+   *     override def writes(o: User) = map("name" -> o.name, "email" -> o.email)
+   *   }
+   * }}}
+   */
+  def writeFormat[T]: DynamoWrites[T] = macro FormatsMacroImpl.formatWriteImpl[T]
 
   /**
    * To make chaining of formats nicer
@@ -45,8 +62,13 @@ object Formats extends DefaultDynamoWrites {
     DynamoValueWrapperImpl(w.writes(field))
 
   def map(fields: (String, DynamoValueWrapper)*): DynamoMap =
-    DynamoMap(fields.map(f => (f._1, f._2.asInstanceOf[DynamoValueWrapperImpl].field)))
+    DynamoMap(fields.map(f => (f._1, f._2.asInstanceOf[DynamoValueWrapperImpl].field)).toMap)
 
+  /**
+   * Method to finally convert our representation of data into the form that the Java SDK needs
+   * @throws IllegalArgumentException if not given a [[DynamoMap]], as thats is what the Java SDK
+   *                                  requires at the top-level.
+   */
   def toDynamo(d: DynamoValue): DynamoData = {
     def convert(value: DynamoValue): AttributeValue = {
       value match {
@@ -66,13 +88,10 @@ trait DefaultDynamoWrites {
     override def writes(s: String): DynamoValue = DynamoString(s)
   }
 
-//  implicit object MapWrites extends DynamoWrites[Map[String, DynamoValue]] {
-//    override def writes(m: Map[String, DynamoValue]) = DynamoMap(m)
-//  }
-
   implicit def mapWritesT[T](implicit w: DynamoWrites[T]) = new DynamoWrites[Map[String, T]] {
     override def writes(o: Map[String, T]): DynamoValue = {
       DynamoMap(o.mapValues(v => w.writes(v)))
     }
   }
+  // todo - add the rest of them
 }

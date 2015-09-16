@@ -1,7 +1,5 @@
 package com.github.cjwebb.dynamomapper
 
-import com.github.cjwebb.dynamomapper.Formats.DynamoWrites
-
 import scala.language.higherKinds
 import scala.reflect.macros._
 import scala.language.experimental.macros
@@ -20,13 +18,12 @@ object FormatsMacroImpl {
     val toMapParams = fields.map { field =>
       val name = field.name.toTermName
       val decoded = name.decodedName.toString
-      q"($decoded -> new AttributeValue(o.$name))"
+      q"($decoded -> o.$name)"
     }
 
     c.Expr[DynamoWrites[T]] { q"""
-      import scala.collection.JavaConverters._
       new DynamoWrites[$tpe] {
-        def writes(o: $tpe): DynamoData = Map(..$toMapParams).asJava
+        override def writes(o: $tpe): DynamoValue = map(..$toMapParams)
       }
       """
     }
