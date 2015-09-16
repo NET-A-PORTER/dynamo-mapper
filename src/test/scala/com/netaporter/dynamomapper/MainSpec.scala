@@ -74,7 +74,7 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures wi
       result.getItem shouldBe expected
     }
 
-    "works with lists" in {
+    "works with lists of case classes" in {
       val id = newId()
 
       putItem(ClassWithList(id, List(SimpleCaseClass("a", "b"), SimpleCaseClass("c", "d"))))
@@ -90,6 +90,20 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures wi
             "id" -> new AttributeValue("c"), "name" -> new AttributeValue("d")
           ).asJava)
         ).asJava)
+      ).asJava
+
+      result.getItem shouldBe expected
+    }
+
+    "works with lists of Strings" in {
+      val id = newId()
+
+      putItem(ClassWithStringList (id, List("a", "b")))
+
+      val result = getItem(id)
+      val expected = Map(
+        "id" -> new AttributeValue(id),
+        "list" -> new AttributeValue().withL(List(new AttributeValue("a"), new AttributeValue("b")).asJava)
       ).asJava
 
       result.getItem shouldBe expected
