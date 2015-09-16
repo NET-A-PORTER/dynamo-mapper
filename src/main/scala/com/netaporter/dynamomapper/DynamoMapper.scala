@@ -13,6 +13,7 @@ import scala.annotation.implicitNotFound
 trait DynamoValue
 case class DynamoString(s: String) extends DynamoValue
 case class DynamoMap(m: Map[String, DynamoValue]) extends DynamoValue
+case class DynamoList(l: Seq[DynamoValue]) extends DynamoValue
 // todo - add the rest of them
 
 /**
@@ -74,6 +75,7 @@ object DynamoMapper extends DefaultDynamoWrites {
       value match {
         case DynamoString(s) => new AttributeValue(s)
         case DynamoMap(m) => new AttributeValue().withM(m.mapValues(convert).asJava)
+        case DynamoList(l) => new AttributeValue().withL(l.map(convert).asJava)
       }
     }
     d match {
@@ -91,6 +93,12 @@ trait DefaultDynamoWrites {
   implicit def mapWritesT[T](implicit w: DynamoWrites[T]) = new DynamoWrites[Map[String, T]] {
     override def writes(o: Map[String, T]): DynamoValue = {
       DynamoMap(o.mapValues(v => w.writes(v)))
+    }
+  }
+
+  implicit def seqWritesT[T](implicit w: DynamoWrites[T]) = new DynamoWrites[Seq[T]] {
+    override def writes(o: Seq[T]): DynamoValue = {
+      DynamoList(o.map(v => w.writes(v)))
     }
   }
   // todo - add the rest of them

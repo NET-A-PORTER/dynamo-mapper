@@ -20,4 +20,10 @@ trait Fixtures {
     implicit val format = writeFormat[ClassWithMap]
   }
 
+  case class ClassWithList(id: String, list: Seq[SimpleCaseClass])
+
+  object ClassWithList {
+    implicit val format = writeFormat[ClassWithList]
+  }
+
 }

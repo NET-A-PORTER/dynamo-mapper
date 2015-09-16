@@ -74,5 +74,26 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures wi
       result.getItem shouldBe expected
     }
 
+    "works with lists" in {
+      val id = newId()
+
+      putItem(ClassWithList(id, List(SimpleCaseClass("a", "b"), SimpleCaseClass("c", "d"))))
+
+      val result = getItem(id)
+      val expected = Map(
+        "id" -> new AttributeValue(id),
+        "list" -> new AttributeValue().withL(List(
+          new AttributeValue().withM(Map(
+            "id" -> new AttributeValue("a"), "name" -> new AttributeValue("b")
+          ).asJava),
+          new AttributeValue().withM(Map(
+            "id" -> new AttributeValue("c"), "name" -> new AttributeValue("d")
+          ).asJava)
+        ).asJava)
+      ).asJava
+
+      result.getItem shouldBe expected
+    }
+
   }
 }
