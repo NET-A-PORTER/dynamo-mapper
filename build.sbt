@@ -18,3 +18,6 @@ libraryDependencies ++=
   "org.scala-lang" % "scala-reflect" % scalaVersion.value ::
   "org.scalatest" %% "scalatest" % "2.2.4" % "test" ::
   Nil
+
+// use DynamoDBLocal for testing
+localdynamodb.settings
