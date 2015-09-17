@@ -1,4 +1,7 @@
 # dynamo-mapper
+
+[![Build Status](https://travis-ci.org/NET-A-PORTER/dynamo-mapper.svg)](https://travis-ci.org/NET-A-PORTER/dynamo-mapper)
+
 An experiment in making the Java SDK DynamoDB Client more Scala-esque.
 
 ```scala
@@ -42,7 +45,7 @@ implicit val writeFormat = new DynamoWrites[User] {
 
 // use the toDynamo method, and then use the Java SDK as normal
 val dynamoData = toDynamo(User("Homer Simpson", "ChunkyLover53@aol.com"))
-client.putItem(new PutItemRequest(tableName, dynamoData)
+client.putItem(new PutItemRequest(tableName, dynamoData))
 ```
 
 ### Macros
