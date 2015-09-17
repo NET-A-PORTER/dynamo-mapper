@@ -1,0 +1,12 @@
+---
+language: scala
+script: "sbt test"
+
+jdk:
+  - oraclejdk8
+
+scala:
+  - 2.11.7
+
+sudo: false
+
