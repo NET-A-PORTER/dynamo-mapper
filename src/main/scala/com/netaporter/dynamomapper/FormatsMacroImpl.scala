@@ -22,8 +22,8 @@ object FormatsMacroImpl {
     }
 
     c.Expr[DynamoWrites[T]] { q"""
-      new DynamoWrites[$tpe] {
-        override def writes(o: $tpe): DynamoValue = map(..$toMapParams)
+      new _root_.com.netaporter.dynamomapper.DynamoWrites[$tpe] {
+        override def writes(o: $tpe) = map(..$toMapParams)
       }
       """
     }
