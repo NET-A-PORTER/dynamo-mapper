@@ -20,7 +20,7 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures wi
     client.getItem(new GetItemRequest(tableName, Map("id" -> new AttributeValue(id)).asJava)).futureValue
   }
 
-  "writing objects" - {
+  "writing and reading objects" - {
 
     "toDynamo throws IllegalArgumentException if not given a DynamoMap" in {
       intercept[IllegalArgumentException] (
@@ -31,11 +31,13 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures wi
     "works with simple string case classes" in {
       val id = newId()
 
-      putItem(SimpleCaseClass(id, "simple"))
+      val simpleCaseClass = SimpleCaseClass(id, "simple")
+      putItem(simpleCaseClass)
 
       val result = getItem(id)
       val expected = Map("name" -> new AttributeValue("simple"), "id" -> new AttributeValue(id)).asJava
 
+      fromDynamo(result.getItem).as[SimpleCaseClass] shouldBe DynamoReadSuccess(simpleCaseClass)
       result.getItem shouldBe expected
     }
 
@@ -43,7 +45,8 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures wi
       val id = newId()
       val nestedId = newId()
 
-      putItem(NestedCaseClass(id, SimpleCaseClass(nestedId, "simple")))
+      val nestedCaseClass = NestedCaseClass(id, SimpleCaseClass(nestedId, "simple"))
+      putItem(nestedCaseClass)
 
       val result = getItem(id)
       val expected = Map(
@@ -53,6 +56,8 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures wi
           "name" -> new AttributeValue("simple")
         ).asJava)
       ).asJava
+
+      fromDynamo(result.getItem).as[NestedCaseClass] shouldBe DynamoReadSuccess(nestedCaseClass)
 
       result.getItem shouldBe expected
     }
