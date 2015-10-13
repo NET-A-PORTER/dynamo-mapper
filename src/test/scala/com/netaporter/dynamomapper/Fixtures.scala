@@ -7,15 +7,15 @@ trait Fixtures {
 
   object SimpleCaseClass {
     implicit val format = writeFormat[SimpleCaseClass]
-    implicit val rFormat = readFormat[SimpleCaseClass]
-//    implicit val readFormat = new DynamoReads[SimpleCaseClass] {
-//      override def reads(d: DynamoValue): DynamoReadResult[SimpleCaseClass] = {
-//        for {
-//          id <- d.attr[String]("id")
-//          name <- d.attr[String]("name")
-//        } yield SimpleCaseClass(id, name)
-//      }
-//    }
+//    implicit val rFormat = readFormat[SimpleCaseClass]
+    implicit val readFormat = new DynamoReads[SimpleCaseClass] {
+      override def reads(d: DynamoValue): DynamoReadResult[SimpleCaseClass] = {
+        for {
+          id <- d.attr[String]("id")
+          name <- d.attr[String]("name")
+        } yield SimpleCaseClass(id, name)
+      }
+    }
   }
   case class NestedCaseClass(id: String, simple: SimpleCaseClass)
 
@@ -49,6 +49,13 @@ trait Fixtures {
 
   object ClassWithStringList {
     implicit val format = writeFormat[ClassWithStringList]
+  }
+
+  case class ClassWithOption(id: String, name: String, optional: Option[String])
+
+  object ClassWithOption {
+    implicit val wf = writeFormat[ClassWithOption]
+    implicit val rf = readFormat[ClassWithOption]
   }
 
 }

@@ -24,6 +24,8 @@ case class DynamoMap(m: Map[String, DynamoValue]) extends DynamoValue
 
 case class DynamoList(l: Seq[DynamoValue]) extends DynamoValue
 
+case object DynamoNull extends DynamoValue
+
 // todo - add the rest of them
 
 /**
@@ -80,12 +82,9 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
     DynamoMap(fields.map(f => (f._1, f._2.asInstanceOf[DynamoValueWrapperImpl].field)).toMap)
 
   implicit class DynamoPath(val value: DynamoValue) extends AnyVal {
-    def attr[T](name: String)(implicit reads: DynamoReads[T]): DynamoReadResult[T] = {
-      value match {
-        case DynamoMap(m) =>
-          m.get(name).map(_.as[T]).getOrElse(DynamoReadFailure(Seq("")))
-        case x => DynamoReadFailure(Seq(s"$x is not an instance of DynamoMap"))
-      }
+    def attr[T](name: String)(implicit reads: DynamoReads[T]): DynamoReadResult[T] = value match {
+      case DynamoMap(m) => m.getOrElse(name, DynamoNull).as[T]
+      case x => DynamoReadFailure(Seq(s"$x is not an instance of DynamoMap"))
     }
   }
 
@@ -95,15 +94,17 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
    *                                  requires at the top-level.
    */
   def toDynamo(d: DynamoValue): DynamoData = {
+    def filterNulls(m: Map[String, DynamoValue]) = m.filter{ case (k, v) => v != DynamoNull }
+
     def convert(value: DynamoValue): AttributeValue = {
       value match {
         case DynamoString(s) => new AttributeValue(s)
-        case DynamoMap(m) => new AttributeValue().withM(m.mapValues(convert).asJava)
+        case DynamoMap(m) => new AttributeValue().withM(filterNulls(m).mapValues(convert).asJava)
         case DynamoList(l) => new AttributeValue().withL(l.map(convert).asJava)
       }
     }
     d match {
-      case DynamoMap(m) => m.mapValues(convert).asJava
+      case DynamoMap(m) => filterNulls(m).mapValues(convert).asJava
       case _ => throw new IllegalArgumentException("top level object must be a Dynamo Map")
     }
   }
@@ -139,6 +140,12 @@ trait DefaultDynamoWrites {
       DynamoList(o.map(v => w.writes(v)))
     }
   }
+
+  implicit def writesOptionT[T](implicit w: DynamoWrites[T]) = new DynamoWrites[Option[T]] {
+    override def writes(o: Option[T]): DynamoValue = {
+      o.map(t => w.writes(t)).getOrElse(DynamoNull)
+    }
+  }
   // todo - add the rest of them
 }
 
@@ -149,6 +156,16 @@ trait DefaultDynamoReads {
       value match {
         case DynamoString(s) => DynamoReadSuccess(s)
         case _ => DynamoReadFailure(Seq(s"$value is not a String"))
+      }
+    }
+  }
+
+  implicit def readsOption[T](implicit r: DynamoReads[T]) = new DynamoReads[Option[T]] {
+    override def reads(dynamoValue: DynamoValue): DynamoReadResult[Option[T]] = {
+      // todo - this seems dangerous. surely there are other reading failures?
+      r.reads(dynamoValue) match {
+        case DynamoReadSuccess(t) => DynamoReadSuccess(Option(t))
+        case DynamoReadFailure(e) => DynamoReadSuccess(None)
       }
     }
   }

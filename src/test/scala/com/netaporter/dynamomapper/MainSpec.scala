@@ -114,5 +114,23 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures wi
       result.getItem shouldBe expected
     }
 
+    "works with options being Some" in {
+      val item = ClassWithOption(newId(), "a", Some("b"))
+
+      putItem(item)
+
+      val result = getItem(item.id)
+      fromDynamo(result.getItem).as[ClassWithOption] shouldBe DynamoReadSuccess(item)
+    }
+
+    "works with options being None" in {
+      val item = ClassWithOption(newId(), "a", None)
+
+      putItem(item)
+
+      val result = getItem(item.id)
+      fromDynamo(result.getItem).as[ClassWithOption] shouldBe DynamoReadSuccess(item)
+    }
+
   }
 }

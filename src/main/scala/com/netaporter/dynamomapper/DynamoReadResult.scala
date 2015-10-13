@@ -5,16 +5,17 @@ sealed trait DynamoReadResult[+A] {
   def isSuccess: Boolean
   def isFailure: Boolean = !isSuccess
 
-  // todo - handle Option[B] in map/flatMap
+  // todo - accumulate errors
+  def flatMap[B](f: A => DynamoReadResult[B]): DynamoReadResult[B] = this match {
+    case DynamoReadSuccess(a) => f(a)
+    case e: DynamoReadFailure => e
+  }
 
   // todo - accumulate errors
-  def flatMap[B](f: A => DynamoReadResult[B]): DynamoReadResult[B] =
-    if (isSuccess) f(this.get) else DynamoReadFailure(Seq("failure :("))
-
-  // todo - accumulate errors
-  def map[B](f: A => B): DynamoReadResult[B] =
-    if (isSuccess) DynamoReadSuccess(f(this.get)) else DynamoReadFailure(Seq("failure :("))
-
+  def map[B](f: A => B): DynamoReadResult[B] = this match {
+    case DynamoReadSuccess(a) => DynamoReadSuccess(f(a))
+    case e: DynamoReadFailure => e
+  }
 }
 
 case class DynamoReadSuccess[A](value: A) extends DynamoReadResult[A] {
