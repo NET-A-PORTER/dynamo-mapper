@@ -83,7 +83,14 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
 
   implicit class DynamoPath(val value: DynamoValue) extends AnyVal {
     def attr[T](name: String)(implicit reads: DynamoReads[T]): DynamoReadResult[T] = value match {
-      case DynamoMap(m) => m.getOrElse(name, DynamoNull).as[T]
+      // todo - make this nicer
+      case DynamoMap(m) => m.getOrElse(name, DynamoNull) match {
+        case n @ DynamoNull => n.as[T] match {
+          case DynamoReadFailure(errs) => DynamoReadFailure(Seq("not found: " + name))
+          case x => x
+        }
+        case x => x.as[T]
+      }
       case x => DynamoReadFailure(Seq(s"$x is not an instance of DynamoMap"))
     }
   }
@@ -162,7 +169,6 @@ trait DefaultDynamoReads {
 
   implicit def readsOption[T](implicit r: DynamoReads[T]) = new DynamoReads[Option[T]] {
     override def reads(dynamoValue: DynamoValue): DynamoReadResult[Option[T]] = {
-      // todo - this seems dangerous. surely there are other reading failures?
       r.reads(dynamoValue) match {
         case DynamoReadSuccess(t) => DynamoReadSuccess(Option(t))
         case DynamoReadFailure(e) => DynamoReadSuccess(None)

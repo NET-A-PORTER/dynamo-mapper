@@ -132,5 +132,24 @@ class MainSpec extends FreeSpec with Matchers with ScalaFutures with Fixtures wi
       fromDynamo(result.getItem).as[ClassWithOption] shouldBe DynamoReadSuccess(item)
     }
 
+    "error messages are good" in {
+      case class Thingy(id: String, name: String, code: Option[String])
+      implicit val thingyWrite = writeFormat[Thingy]
+      implicit val thingyRead: DynamoReads[Thingy] = new DynamoReads[Thingy] {
+        override def reads(d: DynamoValue): DynamoReadResult[Thingy] = {
+          for {
+            id <- d.attr[String]("id")
+            name <- d.attr[String]("bar")
+            code <- d.attr[Option[String]]("baz")
+          } yield Thingy(id, name, code)
+        }
+      }
+
+      val item = Thingy("1234", "abcd", None)
+      putItem(item)
+
+      val result = getItem(item.id)
+      fromDynamo(result.getItem).as[Thingy] shouldBe DynamoReadFailure(Seq("not found: bar"))
+    }
   }
 }
