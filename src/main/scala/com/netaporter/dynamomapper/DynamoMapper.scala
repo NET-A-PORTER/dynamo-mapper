@@ -1,43 +1,8 @@
 package com.netaporter.dynamomapper
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue
-import com.netaporter.dynamomapper.DynamoMapper._
 
 import scala.collection.JavaConverters._
-import scala.annotation.implicitNotFound
-
-trait DynamoReadable {
-  def as[T](implicit reads: DynamoReads[T]): DynamoReadResult[T]
-}
-
-/**
- * Represents a type of value in Dynamo.
- * These are represented in the Dynamo API as S, N, M etc...
- */
-trait DynamoValue extends DynamoReadable {
-  def as[T](implicit reads: DynamoReads[T]): DynamoReadResult[T] = reads.reads(this)
-}
-
-case class DynamoString(s: String) extends DynamoValue
-
-case class DynamoMap(m: Map[String, DynamoValue]) extends DynamoValue
-
-case class DynamoList(l: Seq[DynamoValue]) extends DynamoValue
-
-case object DynamoNull extends DynamoValue
-
-// todo - add the rest of them
-
-/**
- * Base trait that needs to be implemented for any T that needs writing to DynamoDB.
- * Typically, this is an implicit.
- *
- * @tparam T the type to write to DynamoDB
- */
-@implicitNotFound("No DynamoWrites serializer found for type ${T}. Try to implement one.")
-trait DynamoWrites[T] {
-  def writes(o: T): DynamoValue
-}
 
 object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
   /**
@@ -51,7 +16,7 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
 
   /**
    * Creates a DynamoWrites[T] by resolving case class fields and values,
-   * and required implicits are compile-time.
+   * and required implicits at compile time.
    *
    * {{{
    *   import DynamoMapper._
@@ -59,7 +24,7 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
    *   case class User(name: String, email: String)
    *
    *   implicit val userWrites = DynamoMapper.writeFormat[User]
-   *   // macro-compiler will expand this and is equivalent to:
+   *   // macro-compiler will expand this to:
    *   implicit val userWrites = new DynamoWrites[User] {
    *     override def writes(o: User) = map("name" -> o.name, "email" -> o.email)
    *   }
@@ -67,7 +32,28 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
    */
   def writeFormat[T]: DynamoWrites[T] = macro FormatsMacroImpl.formatWriteImpl[T]
 
+  /**
+   * Creates a DynamoReads[T] by resolving case class fields and values,
+   * and required implicits at compile time.
+   *
+   * {{{
+   *   import DynamoMapper._
+   *
+   *   case class User(name: String, email: String)
+   *
+   *   implicit val userReads = DynamoMapper.readFormat[User]
+   *   // macro-compiler will expand this to:
+   *   implicit val userReads = new DynamoReads[User] {
+   *     override def reads(d: DynamoValue): DynamoReadResult[User] =
+   *       for {
+   *         name  <- d.attr[String]("name")
+   *         email <- d.attr[String]("email")
+   *       } yield User(name, email)
+   *   }
+   * }}}
+   */
   def readFormat[T]: DynamoReads[T] = macro FormatsMacroImpl.formatReadImpl[T]
+
   /**
    * To make chaining of formats nicer
    */
@@ -97,7 +83,7 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
 
   /**
    * Method to finally convert our representation of data into the form that the Java SDK needs
-   * @throws IllegalArgumentException if not given a [[DynamoMap]], as thats is what the Java SDK
+   * @throws IllegalArgumentException if not given a [[DynamoMap]], as that's is what the Java SDK
    *                                  requires at the top-level.
    */
   def toDynamo(d: DynamoValue): DynamoData = {
@@ -106,6 +92,7 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
     def convert(value: DynamoValue): AttributeValue = {
       value match {
         case DynamoString(s) => new AttributeValue(s)
+        case DynamoNumber(n) => new AttributeValue().withN(n)
         case DynamoMap(m) => new AttributeValue().withM(filterNulls(m).mapValues(convert).asJava)
         case DynamoList(l) => new AttributeValue().withL(l.map(convert).asJava)
       }
@@ -120,63 +107,14 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
     def convert(a: AttributeValue): DynamoValue = {
       def isM: Boolean = Option(a.getM).isDefined
       def isL: Boolean = Option(a.getL).isDefined
+      def isN: Boolean = Option(a.getN).isDefined
 
       if (isM) DynamoMap(a.getM.asScala.mapValues(convert).toMap)
       else if (isL) DynamoList(a.getL.asScala.map(convert).toList)
+      else if (isN) DynamoNumber(a.getN)
       else DynamoString(a.getS)
     }
 
     DynamoMap(data.asScala.mapValues(convert).toMap)
-  }
-}
-
-trait DefaultDynamoWrites {
-
-  implicit object StringWrites extends DynamoWrites[String] {
-    override def writes(s: String): DynamoValue = DynamoString(s)
-  }
-
-  implicit def mapWritesT[T](implicit w: DynamoWrites[T]) = new DynamoWrites[Map[String, T]] {
-    override def writes(o: Map[String, T]): DynamoValue = {
-      DynamoMap(o.mapValues(v => w.writes(v)))
-    }
-  }
-
-  implicit def seqWritesT[T](implicit w: DynamoWrites[T]) = new DynamoWrites[Seq[T]] {
-    override def writes(o: Seq[T]): DynamoValue = {
-      DynamoList(o.map(v => w.writes(v)))
-    }
-  }
-
-  implicit def writesOptionT[T](implicit w: DynamoWrites[T]) = new DynamoWrites[Option[T]] {
-    override def writes(o: Option[T]): DynamoValue = {
-      o.map(t => w.writes(t)).getOrElse(DynamoNull)
-    }
-  }
-  // todo - add the rest of them
-}
-
-trait DefaultDynamoReads {
-
-  implicit object StringReads extends DynamoReads[String] {
-    override def reads(value: DynamoValue): DynamoReadResult[String] = {
-      value match {
-        case DynamoString(s) => DynamoReadSuccess(s)
-        case _ => DynamoReadFailure(Seq(s"$value is not a String"))
-      }
-    }
-  }
-
-  implicit def readsOption[T](implicit r: DynamoReads[T]) = new DynamoReads[Option[T]] {
-    override def reads(dynamoValue: DynamoValue): DynamoReadResult[Option[T]] = {
-      r.reads(dynamoValue) match {
-        case DynamoReadSuccess(t) => DynamoReadSuccess(Option(t))
-        case DynamoReadFailure(e) => DynamoReadSuccess(None)
-      }
-    }
-  }
-
-  implicit def readsT[T](implicit r: DynamoReads[T]) = new DynamoReads[T] {
-    override def reads(data: DynamoValue): DynamoReadResult[T] = r.reads(data)
   }
 }

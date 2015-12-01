@@ -19,6 +19,7 @@ libraryDependencies ++=
   "com.amazonaws.scala" % "aws-scala-sdk-dynamodb" % "1.10.7" ::
   "org.scala-lang" % "scala-reflect" % scalaVersion.value ::
   "org.scalatest" %% "scalatest" % "2.2.4" % "test" ::
+  "org.scalacheck" %% "scalacheck" % "1.12.5" % "test" ::
   Nil
 
 // use DynamoDBLocal for testing
