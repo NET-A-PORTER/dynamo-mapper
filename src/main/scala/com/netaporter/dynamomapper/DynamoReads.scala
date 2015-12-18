@@ -2,6 +2,8 @@ package com.netaporter.dynamomapper
 
 import scala.annotation.implicitNotFound
 
+import scala.language.higherKinds
+
 /**
  * Base trait that needs to be implemented for any T that needs reading from to DynamoDB.
  * Typically, this is an implicit.
@@ -61,5 +63,33 @@ trait DefaultDynamoReads {
 
   implicit def readsT[T](implicit r: DynamoReads[T]) = new DynamoReads[T] {
     override def reads(data: DynamoValue): DynamoReadResult[T] = r.reads(data)
+  }
+
+  implicit def readsSeq[T](implicit r: DynamoReads[T]) = new DynamoReads[Seq[T]] {
+    override def reads(value: DynamoValue): DynamoReadResult[Seq[T]] = {
+      value match {
+        case DynamoList(l) => DynamoReadResult.sequence(l.map(r.reads))
+        case _ => DynamoReadFailure(Seq(s"$value is not a Seq"))
+      }
+    }
+  }
+
+  implicit object StringSetReads extends DynamoReads[Set[String]] {
+    override def reads(dynamoValue: DynamoValue): DynamoReadResult[Set[String]] = {
+      dynamoValue match {
+        case DynamoStringSet(s) => DynamoReadSuccess(s)
+        case _ => DynamoReadFailure(Seq(s"$dynamoValue is not Set[String]"))
+      }
+    }
+  }
+
+  // todo - can we remove these, and provide Iterable, or Traversable implementations?
+  implicit def readsList[T](implicit r: DynamoReads[T]) = new DynamoReads[List[T]] {
+    override def reads(value: DynamoValue): DynamoReadResult[List[T]] = {
+      value match {
+        case DynamoList(l) => DynamoReadResult.sequence(l.map(r.reads).toList)
+        case _ => DynamoReadFailure(List(s"$value is not a Seq"))
+      }
+    }
   }
 }

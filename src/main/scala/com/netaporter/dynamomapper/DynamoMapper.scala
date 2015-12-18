@@ -95,6 +95,8 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
         case DynamoNumber(n) => new AttributeValue().withN(n)
         case DynamoMap(m) => new AttributeValue().withM(filterNulls(m).mapValues(convert).asJava)
         case DynamoList(l) => new AttributeValue().withL(l.map(convert).asJava)
+        case DynamoStringSet(s) => new AttributeValue().withSS(s.asJava)
+        case DynamoNull => new AttributeValue().withNULL(false) // todo - this might be incorrect. I don't understand the API
       }
     }
     d match {
@@ -108,10 +110,14 @@ object DynamoMapper extends DefaultDynamoWrites with DefaultDynamoReads {
       def isM: Boolean = Option(a.getM).isDefined
       def isL: Boolean = Option(a.getL).isDefined
       def isN: Boolean = Option(a.getN).isDefined
+      def isSS: Boolean = Option(a.getSS).isDefined
+      def isNull: Boolean = Option(a.getNULL).isDefined
 
       if (isM) DynamoMap(a.getM.asScala.mapValues(convert).toMap)
       else if (isL) DynamoList(a.getL.asScala.map(convert).toList)
       else if (isN) DynamoNumber(a.getN)
+      else if (isNull) DynamoNull
+      else if (isSS) DynamoStringSet(a.getSS.asScala.toSet)
       else DynamoString(a.getS)
     }
 

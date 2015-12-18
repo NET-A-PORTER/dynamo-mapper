@@ -31,6 +31,18 @@ trait DefaultDynamoWrites {
     }
   }
 
+  implicit def listWritesT[T](implicit w: DynamoWrites[T]) = new DynamoWrites[List[T]] {
+    override def writes(o: List[T]): DynamoValue = {
+      DynamoList(o.map(v => w.writes(v)))
+    }
+  }
+
+  implicit object StringSetWrites extends DynamoWrites[Set[String]] {
+    override def writes(o: Set[String]): DynamoValue = {
+      DynamoStringSet(o)
+    }
+  }
+
   implicit def writesOptionT[T](implicit w: DynamoWrites[T]) = new DynamoWrites[Option[T]] {
     override def writes(o: Option[T]): DynamoValue = {
       o.map(t => w.writes(t)).getOrElse(DynamoNull)

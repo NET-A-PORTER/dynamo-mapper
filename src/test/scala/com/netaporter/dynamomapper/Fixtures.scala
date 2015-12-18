@@ -7,7 +7,6 @@ trait Fixtures {
 
   object SimpleCaseClass {
     implicit val format = writeFormat[SimpleCaseClass]
-//    implicit val rFormat = readFormat[SimpleCaseClass]
     implicit val readFormat = new DynamoReads[SimpleCaseClass] {
       override def reads(d: DynamoValue): DynamoReadResult[SimpleCaseClass] = {
         for {
@@ -22,15 +21,6 @@ trait Fixtures {
   object NestedCaseClass {
     implicit val format = writeFormat[NestedCaseClass]
     implicit val readFormats = readFormat[NestedCaseClass]
-
-//    implicit val readFormats = new DynamoReads[NestedCaseClass] {
-//      override def reads(d: DynamoValue): DynamoReadResult[NestedCaseClass] = {
-//        d.attr[String]("id") flatMap { id =>
-//        d.attr[SimpleCaseClass]("simple") map { simple =>
-//          NestedCaseClass(id, simple)
-//        }}
-//      }
-//    }
   }
 
   case class ClassWithMap(id: String, map: Map[String, String])

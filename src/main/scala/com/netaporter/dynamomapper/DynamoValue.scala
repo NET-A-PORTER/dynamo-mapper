@@ -18,4 +18,10 @@ case class DynamoMap(m: Map[String, DynamoValue]) extends DynamoValue
 
 case class DynamoList(l: Seq[DynamoValue]) extends DynamoValue
 
+case class DynamoStringSet(s: Set[String]) extends DynamoValue
+
+// todo - DynamoNumberSet
+
+// todo - DynamoBinarySet
+
 case object DynamoNull extends DynamoValue
