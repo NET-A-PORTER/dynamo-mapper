@@ -49,7 +49,7 @@ object FormatsMacroImpl {
 
     c.Expr[DynamoReads[T]] { q"""
       new _root_.com.netaporter.dynamomapper.DynamoReads[$tpe] {
-        override def reads(o: DynamoValue) =
+        override def reads(o: _root_.com.netaporter.dynamomapper.DynamoValue) =
          for (..$fromMapParams) yield $companionObj(..$names)
       }
       """

@@ -27,6 +27,11 @@ sealed trait DynamoReadResult[+A] {
   }
 
   private def foreach[B](f: A => B): Unit = f(get)
+
+  def getOrElse[B >: A](default: => B): B =
+    if (isSuccess) this.get else default
+
+  def asOption: Option[A] = if (isSuccess) Some(this.get) else None
 }
 
 object DynamoReadResult {
